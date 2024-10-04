@@ -59,7 +59,7 @@ class YieldCurve(BaseModel):
     rates: list[DailyRate]
 
 
-@router.get("/treasuries/yield_curve")
+@router.get("/treasuries/yield_curve", response_model=list[YieldCurve])
 async def get_yield_curve():
     result = defaultdict(list)
     for term, rate in TREASURY_RATES:
