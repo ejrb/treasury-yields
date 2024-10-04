@@ -1,13 +1,11 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from app.services import order_service
+from app.db import get_db
 
-from fastapi import APIRouter
 
 router = APIRouter()
-
-
-@router.get("/orders")
-async def get_orders():
-    return {"orders": []}
 
 
 class Order(BaseModel):
@@ -15,6 +13,11 @@ class Order(BaseModel):
     amount: int
 
 
+@router.get("/orders")
+async def list_orders(db: Session = Depends(get_db)):
+    return order_service.get_orders(db=db)
+
+
 @router.post("/orders")
-async def create_order(order: Order):
-    return {"message": "Order submitted", "order": order}
+async def create_order(order: Order, db: Session = Depends(get_db)):
+    return order_service.create_order(db=db, term=order.term, amount=order.amount)
