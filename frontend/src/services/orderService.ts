@@ -3,7 +3,7 @@ import { API_URL } from "./constants";
 
 export async function listOrders() {
   try {
-    const response = await axios.get(`${API_URL}/orders`);
+    const response = await axios.get<Order[]>(`${API_URL}/orders`);
     return response.data;
   } catch (error) {
     console.log(error);
@@ -11,7 +11,7 @@ export async function listOrders() {
   }
 }
 
-type CreateOrder = {
+export type CreateOrder = {
   amount: number;
   term: number;
 };
