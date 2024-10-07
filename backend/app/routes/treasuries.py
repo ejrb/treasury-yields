@@ -1,10 +1,9 @@
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
-from typing import Iterable
-
-from collections import defaultdict
-from fastapi import APIRouter
+import requests
 from pydantic import BaseModel, ConfigDict
+
+from fastapi import APIRouter
 
 router = APIRouter()
 
@@ -29,29 +28,25 @@ class DailyRate(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    @classmethod
-    def from_raw(cls, data: str) -> Iterable[tuple[MaturityTerm, "DailyRate"]]:
-        header, *rows = data.strip().split("\n")
-        maturity_terms = [
-            MaturityTerm.from_name(name) for name in header.split("\t")[1:]
-        ]
 
-        for row in rows:
-            datestr, *rates = row.strip().split("\t")
-            day = datetime.strptime(datestr, "%m/%d/%Y").date()
-            for rate, term in zip(rates, maturity_terms):
-                yield term, cls(date=day, rate=Decimal(rate))
+FRED_API_URL = "https:#api.stlouisfed.org/fred/series/observations"
 
-
-TREASURY_RATES = DailyRate.from_raw(
-    # Source: https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr_date_value_month=202410
-    """
-        Date	1 Mo	2 Mo	3 Mo	4 Mo	6 Mo	1 Yr	2 Yr	3 Yr	5 Yr	7 Yr	10 Yr	20 Yr	30 Yr
-        10/01/2024	4.96	4.87	4.71	4.63	4.36	3.96	3.61	3.52	3.51	3.60	3.74	4.14	4.08
-        10/02/2024	4.92	4.83	4.69	4.61	4.36	3.97	3.63	3.54	3.55	3.65	3.79	4.19	4.14
-        10/03/2024	4.99	4.85	4.68	4.61	4.37	4.02	3.70	3.62	3.62	3.71	3.85	4.24	4.18
-    """
-)
+YIELD_SERIES = [
+    ["DGS1MO", "1 Mo"],
+    ["DGS2MO", "2 Mo"],
+    # "DGS3MO", #  3 Mo
+    ["DGS6MO", "6 Mo"],
+    ["DGS1", "1 Yr"],
+    ["DGS2", "2 Yr"],
+    # "DGS3", #  3 Yr
+    ["DGS5", "5 Yr"],
+    # "DGS7", #  7 Yr
+    ["DGS10", "10 Yr"],
+    # "DGS20", #  20 Yr
+    # "DGS30", #  30 Yr
+]
+START_DATE = "2024-01-01"
+API_KEY = "..."
 
 
 class YieldCurve(BaseModel):
@@ -59,9 +54,33 @@ class YieldCurve(BaseModel):
     rates: list[DailyRate]
 
 
+def get_fred_yield_curve(series_id: str, name: str) -> YieldCurve:
+    url = f"https://api.stlouisfed.org/fred/series/observations"
+    params = dict(
+        api_key=API_KEY,
+        series_id=series_id,
+        file_type="json",
+        observation_start=START_DATE,
+    )
+
+    response = requests.get(url, params=params)
+
+    data = response.json()["observations"]
+
+    return YieldCurve(
+        term=MaturityTerm.from_name(name),
+        rates=[
+            DailyRate(date=rate["date"], rate=Decimal(rate["value"]))
+            for rate in data
+            if rate["value"] != "."
+        ],
+    )
+
+
 @router.get("/treasuries/yield_curve", response_model=list[YieldCurve])
 async def get_yield_curve():
-    result = defaultdict(list)
-    for term, rate in TREASURY_RATES:
-        result[term].append(rate)
-    return [YieldCurve(term=term, rates=rates) for term, rates in result.items()]
+    return [
+        get_fred_yield_curve("DGS1MO", "1 Mo"),
+        get_fred_yield_curve("DGS1", "1 Yr"),
+        get_fred_yield_curve("DGS5", "5 Yr"),
+    ]
