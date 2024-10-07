@@ -28,16 +28,16 @@ export const flattenYields = (yieldCurves: YieldCurve[]) => {
 };
 
 const strokeColors = [
-  "#FF5733", // Vivid Red-Orange
-  "#33FF57", // Bright Green
-  "#3357FF", // Bold Blue
-  "#FF33A8", // Magenta Pink
-  "#FFBD33", // Vibrant Yellow
-  "#33FFF5", // Aqua
-  "#FF3333", // Bright Red
-  "#8D33FF", // Purple
-  "#FF8C33", // Orange
-  "#33FF8C", // Light Green
+  "#FF5733",
+  "#33FF57",
+  "#3357FF",
+  "#FF33A8",
+  "#FFBD33",
+  "#33FFF5",
+  "#FF3333",
+  "#8D33FF",
+  "#FF8C33",
+  "#33FF8C",
 ];
 
 const YieldCurveChart = ({ data }: { data: FlattenedRate[] }) => {
@@ -45,8 +45,19 @@ const YieldCurveChart = ({ data }: { data: FlattenedRate[] }) => {
     <ResponsiveContainer width="100%" height={400}>
       <LineChart data={data}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
-        <YAxis />
+        <XAxis
+          dataKey="date"
+          tick={{ fontSize: 12, fill: "#666" }}
+          tickLine={false}
+          padding={{ left: 20, right: 20 }}
+          angle={-45}
+          height={60}
+        />
+        <YAxis
+          tick={{ fontSize: 12, fill: "#666" }}
+          tickLine={false}
+          axisLine={false}
+        />
         <Tooltip />
         <Legend />
 
